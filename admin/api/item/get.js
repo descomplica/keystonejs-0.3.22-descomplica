@@ -52,16 +52,22 @@ module.exports = function(req, res) {
 
 					var refList = field.refList;
 
+					console.log('drilldown:::refList', refList);
+
 					if (field.many) {
 						if (!item.get(field.path).length) {
 							return done();
 						}
+						console.log('drilldown:::refList:::Model', refList.model);
+						console.log('drilldown:::field.path', field.path);
+						console.log('drilldown:::item.get(field.path)', field.path);
 						refList.model.find().where('_id').in(item.get(field.path)).limit(4).exec(function(err, results) {
 							if (err || !results) {
 								done(err);
 							}
 							var more = (results.length === 4) ? results.pop() : false;
 							if (results.length) {
+								console.log('2 findById:::Results', results);
 								// drilldown.data[path] = results;
 								drilldown.items.push({
 									list: refList.getOptions(),
@@ -80,8 +86,12 @@ module.exports = function(req, res) {
 						if (!item.get(field.path)) {
 							return done();
 						}
+						console.log('2 drilldown:::refList:::Model', refList.model);
+						console.log('2 drilldown:::field.path', field.path);
+						console.log('2 drilldown:::item.get(field.path)', item.get(field.path));
 						refList.model.findById(item.get(field.path)).exec(function(err, result) {
 							if (result) {
+								console.log('2 findById:::Result', result);
 								// drilldown.data[path] = result;
 								drilldown.items.push({
 									list: refList.getOptions(),
@@ -110,6 +120,8 @@ module.exports = function(req, res) {
 		if (req.query.relationships === 'true') {
 			tasks.push(function(cb) {
 
+				console.log('relationships:::req.list.relationships', req.list.relationships);
+
 				relationships = _.values(_.compact(_.map(req.list.relationships, function(i) {
 					if (i.isValid) {
 						return _.clone(i);
@@ -119,22 +131,32 @@ module.exports = function(req, res) {
 					}
 				})));
 
+				console.log('relationships:::i.path', i.path);
+				console.log('relationships:::req.list.key', req.list.key);
+				console.log('relationships:::result', relationships);
+
 				async.each(relationships, function(rel, done) {
 
 					// TODO: Handle invalid relationship config
+					console.log('relationships:::each:::rel.ref', rel.ref);
 					rel.list = keystone.list(rel.ref);
 					rel.sortable = (rel.list.get('sortable') && rel.list.get('sortContext') === req.list.key + ':' + rel.path);
+
+					console.log('relationships:::each:::rel.list', rel.list);
 
 					// TODO: Handle relationships with more than 1 page of results
 					var q = rel.list.paginate({ page: 1, perPage: 100 })
 						.where(rel.refPath).equals(item.id)
 						.sort(rel.list.defaultSort);
 
+					console.log('relationships:::each:::q', q);	
+
 					// rel.columns = _.reject(rel.list.defaultColumns, function(col) { return (col.type == 'relationship' && col.refList == req.list) });
 					rel.columns = rel.list.defaultColumns;
 					rel.list.selectColumns(q, rel.columns);
 
 					q.exec(function(err, results) {
+						console.log('relationships:::each:::q.exec:::results', results);	
 						rel.items = results;
 						done(err);
 					});
